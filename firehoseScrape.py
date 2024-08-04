@@ -128,7 +128,7 @@ def countReporting() -> None:
     if UPDATES_ENABLED:
         print("New This Session: " + str(FOUND_COUNT) + " (+" + str(newItems) + ")")
         print("Duplicates this session: " + str(DUPLICATE_COUNT))
-        print("New Item Rate: " + ("{:.2f}".format(ratePerHour)) + "/hr, Avg: " + ("{:.2f}".format(avgRate)) + "/hr")
+        print("New Item Rate: " + ("{:.2f}".format(ratePerHour)) + "/hr, Avg: " + ("{:.2f}".format(avgRate)) + "/hr" + "\n")
 
     startTimer(UPDATE_PERIOD, countReporting)
 
