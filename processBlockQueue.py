@@ -1,0 +1,139 @@
+import threading, time, sys, re
+from datetime import datetime
+import json
+from atproto import FirehoseSubscribeReposClient, parse_subscribe_repos_message
+from atproto import Client, CAR, models
+from atproto_client.models.utils import get_or_create
+import mysql.connector
+from atproto import exceptions
+from mysql.connector import Error
+
+def fetchAuthFromFile(filename):
+    with open(filename, 'r') as file:
+        contents = file.read()
+
+    username, password = contents.split(",")
+    username = username.strip()
+    password = password.strip()
+    return [username,password]
+
+# Connects to local SQL server
+def mysqlConnect(auth):
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='bsky',
+            user=sqlAuth[0],
+            password=sqlAuth[1]
+        )
+        if connection.is_connected():
+            print("Connected to local DB.")
+            return connection
+    except Error as e:
+        print(f"Error while connecting to MySQL: {e}")
+        sys.exit("Could not connect to local DB.")
+
+# Inserts a did value into the local DB so we don't double up blocks and waste requests
+def markAsBlocked(connection, thisDID):
+   
+   
+   try:
+        cursor = connection.cursor()
+        sql_insert_query = """INSERT INTO allblock (did) VALUES (%s)"""
+        cursor.execute(sql_insert_query, (record,))
+        connection.commit()
+    except Error as e:
+        print(f"Error while inserting record: {e}")
+        sys.exit("Problem with committing record to SQL.")
+
+def sqlQueueSize(connection):
+    return
+
+# Checks if a did exists in our local DB
+def fetchBlockList(connection, count):
+    try:
+        cursor = connection.cursor()
+        fetchQuery = """SELECT did FROM allblock WHERE isBlocked = 0 LIMIT %s"""
+        cursor.execute(fetchQuery, (count,))
+        result = cursor.fetchall()
+        cursor.close()
+
+        localList = [row[0] for row in result]
+        return localList
+    except Error as e:
+        print(f"Error while fetching results: {e}")
+        sys.exit("Problem fetching worklist. Quitting.")
+
+# Pretty countdown    
+def countdown_with_progress_bar(timeToWait, bar_length=30, updateRate=30):
+    start_time = time.time()
+    total_duration = timeToWait
+    
+    for i in range(timeToWait, 0, -updateRate):
+        elapsed_time = time.time() - start_time
+        remaining_time = max(timeToWait - elapsed_time, 0)
+        progress = (total_duration - remaining_time) / total_duration
+        arrow = '-' * int(round(progress * bar_length) - 1) + '>'
+        spaces = ' ' * (bar_length - len(arrow))
+        sys.stdout.write(f'\r[{arrow}{spaces}] {int(progress * 100)}% - {int(remaining_time)} seconds remain...')
+        sys.stdout.flush()
+        
+        if remaining_time < updateRate:
+            time.sleep(remaining_time)
+        else:
+            time.sleep(updateRate)
+    
+    # Final update for 100% completion
+    sys.stdout.write(f'\r[{"-" * bar_length}] 100% - 0 seconds remain...\n')
+    sys.stdout.flush()
+
+# Attempts to block an account
+def blockAccount(client, target, sqlConn):
+    result = False
+    try:
+        # Attempt a block req
+        result = client.app.bsky.graph.listitem.create(accClient._session.did, {"subject" : target, "list" : blockList, "createdAt" : client.get_current_time_iso()})
+    
+    except exceptions.RequestException as e:
+
+        # 429 is rate limit
+        if e.args[0].status_code == 429:
+            # fetch the rate limit reset timestamp.
+            resetTime = int(e.args[0].headers['ratelimit-reset'])
+
+            # Find out how long it is until the reset is upon us, plus 30 seconds for safety.
+            currentTimestamp = int(time.time())
+            timeToWait = resetTime - currentTimestamp
+            timeToWait + timeToWait + 30
+
+            # Wait for it...
+            print("Rate Limit Reached. Waiting " + str(timeToWait) + " seconds before continuing...")
+
+            # Be kind and provide a countdown.
+            countdown_with_progress_bar(timeToWait)
+    
+    else:
+        markAsBlocked(sqlConn, target)
+
+# Fetch Auth info, connect to bsky
+bskyAuth = fetchAuthFromFile('auth.dat')
+accClient = Client()
+accClient.login(bskyAuth[0], bskyAuth[1])
+print("Connected to bsky.")
+
+# AT URI for the blocklist being used
+blockList = "at://did:plc:dros7wdbcfosi5ablbi34prd/app.bsky.graph.list/3kyn24wd3v22x"    
+
+# Initialize local SQL connection
+sqlAuth = fetchAuthFromFile('sqlAuth.dat')
+sqlConnection = mysqlConnect(sqlAuth)
+
+allBlocked = False
+
+while not allBlocked:
+    localList = fetchBlockList(sqlConnection, 200)
+
+    for item in localList:
+        blockAccount(item)
+
+    allBlocked = (sqlQueueSize() <= 0)

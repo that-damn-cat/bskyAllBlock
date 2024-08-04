@@ -7,11 +7,13 @@ from atproto_client.models.utils import get_or_create
 import mysql.connector
 from atproto import exceptions
 from mysql.connector import Error
+import atexit
 
 UPDATE_PERIOD = 10
 UPDATES_ENABLED = True
 FOUND_COUNT = 0
 DUPLICATE_COUNT = 0
+activeTimers = []
 
 def fetchAuthFromFile(filename):
     with open(filename, 'r') as file:
@@ -85,6 +87,20 @@ def removeDuplicates(inputList):
     uniqueList = list(set(inputList))
     return uniqueList
 
+# Function to start a timer and add it to the list of active timers
+def startTimer(interval, function, args=(), kwargs={}):
+    timer = threading.Timer(interval, function, args, kwargs)
+    timer.start()
+    activeTimers.append(timer)
+    return timer
+
+def cleanupTimers():
+    for timer in activeTimers:
+        timer.cancel()
+    print("All timers have been cancelled.")
+
+atexit.register(cleanupTimers)
+
 # Print periodic progress updates
 def countReporting() -> None:
     global UPDATE_PERIOD
@@ -96,7 +112,7 @@ def countReporting() -> None:
         print("DID's added to queue this session: " + str(FOUND_COUNT))
         print("Duplicates found this session: " + str(DUPLICATE_COUNT))
 
-    threading.Timer(UPDATE_PERIOD, countReporting).start()
+    startTimer(UPDATE_PERIOD, countReporting)
 
 # Handles response to content retrieved from firehose
 def contentHandler(rawContent, source):
@@ -153,7 +169,7 @@ def on_message_handler(message):
 
 
 # Begin Thread for reporting progress
-countReporting()
+startTimer(UPDATE_PERIOD, countReporting)
 
 # Start the firehose
 firehoseClient.start(on_message_handler)
