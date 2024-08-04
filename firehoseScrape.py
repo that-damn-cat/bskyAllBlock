@@ -9,12 +9,16 @@ from atproto import exceptions
 from mysql.connector import Error
 import atexit
 from pprint import pprint
+import statistics
 
 UPDATE_PERIOD = 10
 UPDATES_ENABLED = True
 FOUND_COUNT = 0
+LAST_FOUND_COUNT = 0
 DUPLICATE_COUNT = 0
+RATE_LIST = []
 activeTimers = []
+
 
 def fetchAuthFromFile(filename):
     with open(filename, 'r') as file:
@@ -61,8 +65,6 @@ def addToQueue(connection, record):
         connection.commit()
     except Error as e:
         print(f"Error while inserting record: {e}")
-        print(sql_insert_query)
-        pprint(data)
         cleanupTimers()
         sys.exit("Problem with committing record to SQL.")
 
@@ -112,11 +114,21 @@ def countReporting() -> None:
     global UPDATE_PERIOD
     global UPDATES_ENABLED
     global FOUND_COUNT
+    global LAST_FOUND_COUNT
     global DUPLICATE_COUNT
+    global RATE_LIST
+
+    # Get rate statistics
+    newItems = FOUND_COUNT - LAST_FOUND_COUNT
+    ratePerHour = (newItems / UPDATE_PERIOD) * 60 * 60
+    RATE_LIST.append(ratePerHour)
+    avgRate = statistics.fmean(RATE_LIST)
+    LAST_FOUND_COUNT = FOUND_COUNT
 
     if UPDATES_ENABLED:
-        print("DID's added to queue this session: " + str(FOUND_COUNT))
-        print("Duplicates found this session: " + str(DUPLICATE_COUNT))
+        print("New This Session: " + str(FOUND_COUNT) + " (+" + str(newItems) + ")")
+        print("Duplicates this session: " + str(DUPLICATE_COUNT))
+        print("New Item Rate: " + ("{:.2f}".format(ratePerHour)) + "/hr, Avg: " + ("{:.2f}".format(avgRate)) + "/hr")
 
     startTimer(UPDATE_PERIOD, countReporting)
 
@@ -138,6 +150,18 @@ def contentHandler(rawContent, source):
     idList.extend(matches)
     idList = removeDuplicates(idList)
 
+    for item in idList:
+        if len(item) > 40:
+            print("BAD MATCHING IN CONTENT")
+            print("Source: ")
+            pprint(source)
+            print("Content: ")
+            pprint(content)
+            print("Regex: ")
+            pprint(handlePattern)
+            cleanupTimers()
+            sys.exit()
+
     # Try to block each one.
     for thisID in idList:
         if didAlreadyFound(sqlConnection, thisID):
@@ -146,6 +170,7 @@ def contentHandler(rawContent, source):
         else:
             addToQueue(sqlConnection, thisID)
             global FOUND_COUNT
+            global LAST_FOUND_COUNT
             FOUND_COUNT = FOUND_COUNT + 1
     return
 
