@@ -29,27 +29,37 @@ def mysqlConnect(auth):
         if connection.is_connected():
             print("Connected to local DB.")
             return connection
-    except Error as e:
+    except mysql.connector.Error as e:
         print(f"Error while connecting to MySQL: {e}")
-        sys.exit("Could not connect to local DB.")
+        sys.exit()
 
-# Inserts a did value into the local DB so we don't double up blocks and waste requests
+# Marks a given DID value in the database as Blocked.
 def markAsBlocked(connection, thisDID):
-   
-   
-   try:
+    try:
         cursor = connection.cursor()
-        sql_insert_query = """INSERT INTO allblock (did) VALUES (%s)"""
-        cursor.execute(sql_insert_query, (record,))
+        updateQuery = """UPDATE allblock SET isBlocked = 1 WHERE did = %s"""
+        cursor.execute(updateQuery, (thisDID,))
         connection.commit()
-    except Error as e:
-        print(f"Error while inserting record: {e}")
-        sys.exit("Problem with committing record to SQL.")
+        cursor.close()
+    except mysql.connector.Error as e:
+        print(f"Error while setting blocked status: {e}")
+        sys.exit()
 
+# Fetches the number of DIDs in the database that haven't been blocked yet
 def sqlQueueSize(connection):
-    return
+    try:
+        cursor = connection.cursor()
+        countQuery = """SELECT COUNT(*) FROM allblock WHERE isBlocked = 0"""
+        cursor.execute(countQuery)
+        result = cursor.fetchone()
+        cursor.close()
 
-# Checks if a did exists in our local DB
+        return int(result[0])
+    except mysql.connector.Error as e:
+        print(f"Error while fetching queue size: {e}")
+        sys.exit()
+
+# Prefetches part of the block queue
 def fetchBlockList(connection, count):
     try:
         cursor = connection.cursor()
@@ -60,12 +70,12 @@ def fetchBlockList(connection, count):
 
         localList = [row[0] for row in result]
         return localList
-    except Error as e:
-        print(f"Error while fetching results: {e}")
-        sys.exit("Problem fetching worklist. Quitting.")
+    except mysql.connector.Error as e:
+        print(f"Error while fetching block queue: {e}")
+        sys.exit()
 
 # Pretty countdown    
-def countdown_with_progress_bar(timeToWait, bar_length=30, updateRate=30):
+def SleepWithCountdownProgressBar(timeToWait, bar_length=30, updateRate=15):
     start_time = time.time()
     total_duration = timeToWait
     
@@ -110,7 +120,7 @@ def blockAccount(client, target, sqlConn):
             print("Rate Limit Reached. Waiting " + str(timeToWait) + " seconds before continuing...")
 
             # Be kind and provide a countdown.
-            countdown_with_progress_bar(timeToWait)
+            SleepWithCountdownProgressBar(timeToWait)
     
     else:
         markAsBlocked(sqlConn, target)
