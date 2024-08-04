@@ -135,7 +135,7 @@ def countReporting() -> None:
 # Handles response to content retrieved from firehose
 def contentHandler(rawContent, source):
     global sqlConnection
-    handlePattern = r"(did\:plc\:.*?)\/"        # Matches did's in json blurbs
+    handlePattern = r"(did\:plc\:.*?(?=[^a-zA-Z\d]))"        # Matches did's in json blurbs
     idList = []                                 # Make a list that will contain all did's involved.
 
     content = json.dumps(rawContent, cls=JSONExtra, indent=2)
@@ -159,6 +159,8 @@ def contentHandler(rawContent, source):
             pprint(content)
             print("Regex: ")
             pprint(handlePattern)
+            pprint("Bad Item: ")
+            print(item)
             cleanupTimers()
             sys.exit()
 
