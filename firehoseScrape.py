@@ -8,6 +8,7 @@ import mysql.connector
 from atproto import exceptions
 from mysql.connector import Error
 import atexit
+from pprint import pprint
 
 UPDATE_PERIOD = 10
 UPDATES_ENABLED = True
@@ -38,6 +39,7 @@ def mysqlConnect(auth):
             return connection
     except Error as e:
         print(f"Error while connecting to MySQL: {e}")
+        cleanupTimers()
         sys.exit("Could not connect to local DB.")
 
 # Initialize local SQL connection
@@ -59,6 +61,9 @@ def addToQueue(connection, record):
         connection.commit()
     except Error as e:
         print(f"Error while inserting record: {e}")
+        print(sql_insert_query)
+        pprint(data)
+        cleanupTimers()
         sys.exit("Problem with committing record to SQL.")
 
 # Checks if a did exists in our local DB
@@ -71,6 +76,7 @@ def didAlreadyFound(connection, record):
         return result[0] > 0
     except Error as e:
         print(f"Error while checking record: {e}")
+        cleanupTimers()
         sys.exit("Problem checking DB for duplicate entry.")
 
 # Quick and dirty JSON handler
