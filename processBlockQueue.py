@@ -63,7 +63,7 @@ def sqlQueueSize(connection):
 def fetchBlockList(connection, count):
     try:
         cursor = connection.cursor()
-        fetchQuery = """SELECT did FROM allblock WHERE isBlocked = 0 LIMIT %s"""
+        fetchQuery = """SELECT did FROM allblock WHERE isBlocked = 0 ORDER BY id ASC LIMIT %s"""
         cursor.execute(fetchQuery, (count,))
         result = cursor.fetchall()
         cursor.close()
