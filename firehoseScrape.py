@@ -86,7 +86,7 @@ def removeDuplicates(inputList):
     return uniqueList
 
 # Print periodic progress updates
-def CountReporting() -> None:
+def countReporting() -> None:
     global UPDATE_PERIOD
     global UPDATES_ENABLED
     global FOUND_COUNT
@@ -96,7 +96,7 @@ def CountReporting() -> None:
         print("DID's added to queue this session: " + str(FOUND_COUNT))
         print("Duplicates found this session: " + str(DUPLICATE_COUNT))
 
-    threading.Timer(UPDATE_PERIOD, CountReporting).start()
+    threading.Timer(UPDATE_PERIOD, countReporting).start()
 
 # Handles response to content retrieved from firehose
 def contentHandler(rawContent, source):
@@ -122,9 +122,9 @@ def contentHandler(rawContent, source):
             global DUPLICATE_COUNT
             DUPLICATE_COUNT = DUPLICATE_COUNT + 1
         else:
-            addToQueue(thisID, sqlConnection)
-            global BLOCK_COUNT
-            BLOCK_COUNT = BLOCK_COUNT + 1
+            addToQueue(sqlConnection, thisID)
+            global FOUND_COUNT
+            FOUND_COUNT = FOUND_COUNT + 1
     return
 
 # Firehose message handler
