@@ -144,6 +144,6 @@ while not allBlocked:
     localList = fetchBlockList(sqlConnection, 200)
 
     for item in localList:
-        blockAccount(item)
+        blockAccount(accClient, item, sqlConnection)
 
-    allBlocked = (sqlQueueSize() <= 0)
+    allBlocked = (sqlQueueSize(sqlConnection) <= 0)
