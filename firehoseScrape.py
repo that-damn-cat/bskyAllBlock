@@ -2,8 +2,6 @@ import threading, time, sys, re
 from datetime import datetime
 import atexit
 
-import json
-
 from atproto import FirehoseSubscribeReposClient, parse_subscribe_repos_message
 from atproto import CAR, models
 from atproto_client.models.utils import get_or_create
@@ -12,6 +10,7 @@ from atproto import exceptions
 import mysql.connector
 from mysql.connector import Error
 
+import json
 from pprint import pprint
 import statistics
 
@@ -22,7 +21,6 @@ LAST_FOUND_COUNT = 0
 DUPLICATE_COUNT = 0
 RATE_LIST = []
 activeTimers = []
-
 
 def fetchAuthFromFile(filename):
     with open(filename, 'r') as file:

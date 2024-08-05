@@ -1,12 +1,13 @@
 import threading, time, sys, re
 from datetime import datetime
-import json
-from atproto import FirehoseSubscribeReposClient, parse_subscribe_repos_message
+
 from atproto import Client, CAR, models
-from atproto_client.models.utils import get_or_create
-import mysql.connector
 from atproto import exceptions
+
+import mysql.connector
 from mysql.connector import Error
+
+from pprint import pprint
 
 def fetchAuthFromFile(filename):
     with open(filename, 'r') as file:
@@ -121,6 +122,8 @@ def blockAccount(client, target, sqlConn):
 
             # Be kind and provide a countdown.
             SleepWithCountdownProgressBar(timeToWait)
+        
+        pprint(result)
     
     else:
         markAsBlocked(sqlConn, target)
