@@ -185,7 +185,17 @@ def on_message_handler(message):
         return
     
     # Parse it
-    car = CAR.from_bytes(commit.blocks)
+    try:
+        car = CAR.from_bytes(commit.blocks)
+    except Error as e:
+        print("Error in parsing CAR from bytes:")
+        pprint(Error)
+        print("Data: ")
+        pprint(commit.blocks)
+        pprint(type(commit.blocks))
+        cleanupTimers()
+        sys.exit()
+
 
     # For each operation in the commit...
     for op in commit.ops:
