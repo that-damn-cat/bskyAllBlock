@@ -1,13 +1,17 @@
 import threading, time, sys, re
 from datetime import datetime
-import json
-from atproto import FirehoseSubscribeReposClient, parse_subscribe_repos_message
-from atproto import Client, CAR, models
-from atproto_client.models.utils import get_or_create
-import mysql.connector
-from atproto import exceptions
-from mysql.connector import Error
 import atexit
+
+import json
+
+from atproto import FirehoseSubscribeReposClient, parse_subscribe_repos_message
+from atproto import CAR, models
+from atproto_client.models.utils import get_or_create
+from atproto import exceptions
+
+import mysql.connector
+from mysql.connector import Error
+
 from pprint import pprint
 import statistics
 
