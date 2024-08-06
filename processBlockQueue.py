@@ -122,11 +122,10 @@ def blockAccount(client, target, sqlConn):
 
             # Be kind and provide a countdown.
             SleepWithCountdownProgressBar(timeToWait)
-        
-        pprint(result)
     
     else:
         if result != False:
+            pprint(result)
             markAsBlocked(sqlConn, target)
 
 # Fetch Auth info, connect to bsky
