@@ -126,7 +126,8 @@ def blockAccount(client, target, sqlConn):
         pprint(result)
     
     else:
-        markAsBlocked(sqlConn, target)
+        if result != False:
+            markAsBlocked(sqlConn, target)
 
 # Fetch Auth info, connect to bsky
 bskyAuth = fetchAuthFromFile('auth.dat')
